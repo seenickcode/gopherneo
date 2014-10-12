@@ -20,6 +20,7 @@ func TestNodes(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	// TODO print out node properties
 
 	// get nodes by label and properties
 	// TODO convert to generic values and add create from this
