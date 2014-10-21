@@ -10,3 +10,13 @@ func TestConnect(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+// 
+// UTILITIES
+//
+
+func assertOk(t *testing.T, err error) {
+	if err != nil {
+		t.Error(err)
+	}
+}

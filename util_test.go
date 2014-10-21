@@ -23,4 +23,15 @@ func TestJoin(t *testing.T) {
 	if joined != "this#that" {
 		t.Error("joined result was: %v", joined)
 	}
+
+	// create cypher node from parameters
+	props := make(map[string]interface{})
+	props["car"] = "My Car"
+	props["bar"] = 3
+	//props["jar"] = 45.0 // TODO support floats
+	cypherizedNode := cypherizeNode("Thing", props, "t")
+	if cypherizedNode != "(t:Thing { car: 'My Car', bar: 3 })" {
+		t.Error("cypherized node is inaccurate: %v\n", cypherizedNode)
+	}
+
 }

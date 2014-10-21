@@ -25,9 +25,9 @@ type Connection struct {
 
 // get the Neo4j "service root"
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
-func NewConnection(uri string) (conn *Connection, err error) {
+func NewConnection(uri string) (c *Connection, err error) {
 
-	conn = &Connection{httpClient: &http.Client{}, Uri: uri}
+	c = &Connection{httpClient: &http.Client{}, Uri: uri}
 
 	// prepare request
 	req, err := http.NewRequest("GET", uri, nil)
@@ -38,7 +38,7 @@ func NewConnection(uri string) (conn *Connection, err error) {
 	req.Header.Add("Content-Type", "application/json")
 
 	// perform request
-	res, err := conn.httpClient.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return
 	}
@@ -49,7 +49,24 @@ func NewConnection(uri string) (conn *Connection, err error) {
 		return
 	}
 	// deserialize
-	err = json.Unmarshal(data, &conn)
+	err = json.Unmarshal(data, &c)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (c *Connection) PerformRequest(req *http.Request) (data []byte, err error) {
+
+	// perform request
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+
+	// get bytes from body
+	data, err = ioutil.ReadAll(res.Body)
+	defer res.Body.Close()
 	if err != nil {
 		return
 	}

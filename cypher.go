@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -14,13 +15,15 @@ type CypherResponse struct {
 
 // perform a cypher query
 // http://docs.neo4j.org/chunked/stable/rest-api-cypher.html#rest-api-send-a-query
-func (c *Connection) PerformQuery(query string) (cypResp CypherResponse, err error) {
-	return c.PerformQueryWithParams(query, nil)
+func (c *Connection) Query(query string) (cypResp CypherResponse, err error) {
+	return c.QueryWithParams(query, nil)
 }
 
 // perform a cypher query with params
 // http://docs.neo4j.org/chunked/stable/rest-api-cypher.html#rest-api-use-parameters
-func (c *Connection) PerformQueryWithParams(query string, params map[string]string) (cypResp CypherResponse, err error) {
+func (c *Connection) QueryWithParams(query string, params map[string]string) (cypResp CypherResponse, err error) {
+
+	log.Print(query)
 
 	// compose URI
 	uri := c.CypherURI
