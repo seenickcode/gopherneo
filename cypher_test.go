@@ -31,7 +31,7 @@ func TestQuery(t *testing.T) {
 	err = json.Unmarshal(*neoRes.Data[0][0], &thingNode)
 	assertOk(t, err)
 	if thingNode.Data["name"] != thingName {
-		t.Error(t, "'thingName' invalid, was: %v\n", thingNode.Data["name"])
+		t.Error("'thingName' invalid, was: %v\n", thingNode.Data["name"])
 	}
 	log.Printf("nice, Neo created our Thing and responded with a Thing node\n")
 
