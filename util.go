@@ -3,7 +3,12 @@ package gopherneo
 import (
 	"bytes"
 	"strconv"
+	"testing"
+	"time"
 )
+
+// string utils
+//
 
 func joinPath(strings []string) string {
 	return joinUsing(strings, "/")
@@ -27,6 +32,25 @@ func joinUsing(strings []string, delimiter string) string {
 	}
 	return buffer.String()
 }
+
+// generators
+//
+
+func generateTimestamp() int64 {
+	return time.Now().UnixNano()
+}
+
+// testing
+//
+
+func assertOk(t *testing.T, err error) {
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// experimental
+//
 
 func cypherizeNode(label string, props map[string]interface{}, alias string) (result string) {
 

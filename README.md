@@ -42,8 +42,13 @@ curl -X POST \
   -H "Accept: application/json; charset=UTF-8" \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "CREATE (t:Thing { name: '915738050', age: 45 }) RETURN t",
-    "params": {}
+    "query": "CREATE (t:Thing { props }) RETURN t",
+    "params": {
+      "props": {
+        "name": "897430271489321",
+        "age": 45
+      }
+    }
   }' \
   http://localhost:7474/db/data/cypher
 
@@ -54,6 +59,33 @@ curl -X POST \
     "prop1": "val1"
   }' \
   http://localhost:7474/db/data/node
+
+curl -X POST \
+  -H "Accept: application/json; charset=UTF-8" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "statements": [{ 
+        "statement": "CREATE (t:Thing { props }) RETURN id(t), t.name",
+        "resultDataContents" : [ "REST" ],
+        "parameters": {
+          "props": {
+            "name": "46372819647389216478321",
+            "age": "45"
+          }
+        }
+      },
+      { 
+        "statement": "CREATE (t:Things2 { props }) RETURN t.age",
+        "resultDataContents" : [ "REST" ],
+        "parameters": {
+          "props": {
+            "name": "46372819647389216478321",
+            "age": "45"
+          }
+        }
+      }]
+  }' \
+  http://localhost:7474/db/data/transaction
 
 
  ````

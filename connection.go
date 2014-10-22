@@ -7,12 +7,13 @@ import (
 )
 
 type Connection struct {
-	httpClient    *http.Client
-	Uri           string
-	Version       string `json:"neo4j_version"`
-	NodeURI       string `json:"node"`
-	NodeLabelsURI string `json:"node_labels"`
-	CypherURI     string `json:"cypher"`
+	httpClient     *http.Client
+	Uri            string
+	Version        string `json:"neo4j_version"`
+	NodeURI        string `json:"node"`
+	NodeLabelsURI  string `json:"node_labels"`
+	CypherURI      string `json:"cypher"`
+	TransactionURI string `json:"transaction"`
 	//  Extensions     interface{} `json:"extensions"`
 	// RefNodeURI     string      `json:"reference_node"`
 	// NodeIndexURI   string      `json:"node_index"`
@@ -20,7 +21,6 @@ type Connection struct {
 	// ExtInfoURI     string      `json:"extensions_info"`
 	// RelTypesURI    string      `json:"relationship_types"`
 	// BatchURI       string      `json:"batch"`
-	// TransactionURI string      `json:"transaction"`
 }
 
 // get the Neo4j "service root"
@@ -56,7 +56,7 @@ func NewConnection(uri string) (c *Connection, err error) {
 	return
 }
 
-func (c *Connection) PerformRequest(req *http.Request) (data []byte, err error) {
+func (c *Connection) performRequest(req *http.Request) (data []byte, err error) {
 
 	// perform request
 	res, err := c.httpClient.Do(req)

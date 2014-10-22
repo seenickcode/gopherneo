@@ -24,6 +24,12 @@ func TestJoin(t *testing.T) {
 		t.Error("joined result was: %v", joined)
 	}
 
+	// create a timestamp (epoch in nanoseconds)
+	ts := generateTimestamp()
+	if ts <= 0 {
+		t.Error("couldn't create timestamp, was: %v\n", ts)
+	}
+
 	// create cypher node from parameters
 	props := make(map[string]interface{})
 	props["car"] = "My Car"
