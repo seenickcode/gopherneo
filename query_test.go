@@ -1,6 +1,7 @@
 package gopherneo
 
 import (
+	"encoding/json"
 	"log"
 	"testing"
 )
@@ -33,9 +34,18 @@ func TestQueryForCreate(t *testing.T) {
 			result.ColNames[2] != "age" {
 			t.Errorf("invalid col names: %v\n", result.ColNames)
 		}
-		if result.Rows[0].Data[1] != props1["name"] ||
-			result.Rows[0].Data[2] != props1["age"] {
-			t.Errorf("invalid col values: %v\n", result.Rows[0].Data)
+		row := struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+			Age  string `json:"age"`
+		}{}
+
+		// unmarshal the first result we get
+		err := json.Unmarshal(*result.Rows[0].rowData, &row)
+		assertOk(t, err)
+
+		if row.Name != props1["name"] {
+			t.Errorf("invalid col value: %v, we wanted: %v\n", row.Name, props1["name"])
 		}
 	}
 	log.Printf("cool, we created a Thing node and got some fields back\n")

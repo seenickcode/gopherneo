@@ -86,6 +86,23 @@ curl -X POST \
       }]
   }' \
   http://localhost:7474/db/data/transaction
+  
+curl -X POST \
+  -H "Accept: application/json; charset=UTF-8" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "statements": [{ 
+        "statement": "CREATE (t:Thing { props }) RETURN t",
+        "resultDataContents" : [ "REST" ],
+        "parameters": {
+          "props": {
+            "name": "99165298374233",
+            "age": "34"
+          }
+        }
+      }]
+  }' \
+  http://localhost:7474/db/data/transaction
 
 
  ````
