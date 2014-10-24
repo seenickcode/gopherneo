@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"runtime"
 )
 
 // string utils
@@ -45,6 +46,9 @@ func generateTimestamp() int64 {
 
 func assertOk(t *testing.T, err error) {
 	if err != nil {
+		_, file, line, _ := runtime.Caller(1)
+		lineNo := strconv.Itoa(line)
+		t.Errorf(file + ":" + lineNo + ": %# v\n", err)
 		t.Error(err)
 	}
 }

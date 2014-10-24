@@ -25,7 +25,7 @@ func NewQuery(cypher string, params map[string]interface{}) *Query {
 
 // Query leverages the official Neo4j transactional endpoint
 // and commits a single statement immediately.
-func (c *Connection) Query(statement *Query) (resp QueryResponse, err error) {
+func (c *Connection) Query(statement *Query) (rows []map[string]interface{}, err error) {
 
 	uri := joinPath([]string{c.TransactionURI, "commit"})
 
@@ -55,23 +55,34 @@ func (c *Connection) Query(statement *Query) (resp QueryResponse, err error) {
 		return
 	}
 
+	// unmarshal our QueryResponse
+	resp := &QueryResponse{}
 	err = json.Unmarshal(data, &resp)
 	if err != nil {
 		return
 	}
-
 	if len(resp.Errors) > 0 {
 		err = errors.New(resp.Errors[0].Code + ": " + resp.Errors[0].Message)
 		return
 	}
 
-	// convert each result row slice to a proper
-	// slice of raw JSON the user can unmarshal later
-	err = result.rawDataToRows()
-	if err != nil {
+	// since we're only expecting one result (single transaction),
+	// convert it to a []map[string]interface{} using the interface we passed in
+	if len(resp.Results) == 0 {
 		return
 	}
 
+	result := resp.Results[0]
+	rows = make([]map[string]interface{}, len(result.Rows))
+
+	for rowNdx, rawRow := range result.Rows {
+		m := make(map[string]interface{})
+		for colNdx, colValue := range rawRow.Cols {
+			colName := result.ColumnNames[colNdx]
+			m[colName] = colValue
+		}
+		rows[rowNdx] = m
+	}
 	return
 }
 
@@ -88,52 +99,11 @@ type QueryError struct {
 
 // represents a transactional response result
 type QueryResult struct {
-	ColumnNames []string             `json:"columns"`
-	RawData     [][]*json.RawMessage `json:"data"`
-	Rows        [][]byte
+	ColumnNames []string    `json:"columns"`
+	Rows        []ResultRow `json:"data"`
 }
 
-// // represents a chunk of data but in the transactional context,
-// // holds the "rest" version of a result row
-// type DataRow struct {
-// 	Data []*json.RawMessage `json:"rest"`
-// }
-
-func (qr *QueryResult) rawDataToRows() (err error) {
-
-	qr.Rows = make([][]byte, len(qr.RawData))
-
-	for rowNdx, rawRow := range qr.RawData {
-
-		m := make(map[string]*json.RawMessage)
-
-		// pop each slice item of raw json into our map
-		for colNdx, rawRowCol := range rawRow {
-			colName := qr.ColumnNames[colNdx]
-			m[colName] = rawRowCol
-		}
-
-		data, err := json.Marshal(m)
-		if err != nil {
-			return
-		}
-
-		qr.Rows[rowNdx] = json.Unmarshal(data)
-	}
-
-	// rs := make([]map[string]*json.RawMessage, len(cq.cr.Data))
-	// for rowNum, row := range cq.cr.Data {
-	// 	m := map[string]*json.RawMessage{}
-	// 	for colNum, col := range row {
-	// 		name := cq.cr.Columns[colNum]
-	// 		m[name] = col
-	// 	}
-	// 	rs[rowNum] = m
-	// }
-	// b, err := json.Marshal(rs)
-	// if err != nil {
-	// 	logPretty(err)
-	// 	return err
-	// }
-	// return json.Unmarshal(b, v)
+// holds the "rest" version of a result row
+type ResultRow struct {
+	Cols []interface{} `json:"rest"`
 }
