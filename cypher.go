@@ -13,79 +13,6 @@ type Query struct {
 	ResultTypes []string               `json:"resultDataContents"`
 }
 
-// NewQuery constructs a new query that the Neo4j transactional
-// endpoint recognizes
-func NewQuery(cypher string, params map[string]interface{}) *Query {
-	qs := &Query{}
-	qs.Cypher = cypher
-	qs.Params = make(map[string]interface{})
-	qs.ResultTypes = []string{"REST"}
-	return qs
-}
-
-// Query leverages the official Neo4j transactional endpoint
-// and commits a single statement immediately.
-func (c *Connection) Query(statement *Query) (rows []map[string]interface{}, err error) {
-
-	uri := joinPath([]string{c.TransactionURI, "commit"})
-
-	// create a new transaction
-	// initialized with one single statement
-	transaction := struct {
-		Statements []*Query `json:"statements"`
-	}{}
-	transaction.Statements = []*Query{statement}
-
-	// prepare request
-	reqData, err := json.Marshal(transaction)
-	if err != nil {
-		return
-	}
-	reqBuf := bytes.NewBuffer(reqData)
-	req, err := http.NewRequest("POST", uri, reqBuf)
-	if err != nil {
-		return
-	}
-	req.Header.Add("Accept", "application/json; charset=UTF-8")
-	req.Header.Add("Content-Type", "application/json")
-
-	// make request
-	data, err := c.performRequest(req)
-	if err != nil {
-		return
-	}
-
-	// unmarshal our QueryResponse
-	resp := &QueryResponse{}
-	err = json.Unmarshal(data, &resp)
-	if err != nil {
-		return
-	}
-	if len(resp.Errors) > 0 {
-		err = errors.New(resp.Errors[0].Code + ": " + resp.Errors[0].Message)
-		return
-	}
-
-	// since we're only expecting one result (single transaction),
-	// convert it to a []map[string]interface{} using the interface we passed in
-	if len(resp.Results) == 0 {
-		return
-	}
-
-	result := resp.Results[0]
-	rows = make([]map[string]interface{}, len(result.Rows))
-
-	for rowNdx, rawRow := range result.Rows {
-		m := make(map[string]interface{})
-		for colNdx, colValue := range rawRow.Cols {
-			colName := result.ColumnNames[colNdx]
-			m[colName] = colValue
-		}
-		rows[rowNdx] = m
-	}
-	return
-}
-
 // represents a transactional response
 type QueryResponse struct {
 	Results []QueryResult `json:"results"`
@@ -105,5 +32,81 @@ type QueryResult struct {
 
 // holds the "rest" version of a result row
 type ResultRow struct {
-	Cols []interface{} `json:"rest"`
+	Cols []*json.RawMessage `json:"rest"`
+}
+
+// NewQuery constructs a new query that the Neo4j transactional
+// endpoint recognizes
+func NewQuery(cypher string) *Query {
+	qs := &Query{}
+	qs.Cypher = cypher
+	qs.Params = make(map[string]interface{})
+	qs.ResultTypes = []string{"REST"}
+	return qs
+}
+
+// Query leverages the official Neo4j transactional endpoint, committing
+// a single statement immediately and returning a single result
+func (c *Connection) Query(statement *Query) (rows []*map[string]interface{}, err error) {
+
+	uri := joinPath([]string{c.TransactionURI, "commit"})
+
+	// create a new transaction for one single statement
+	// http://neo4j.com/docs/stable/rest-api-transactional.html#rest-api-begin-and-commit-a-transaction-in-one-request
+	transaction := struct {
+		Statements []*Query `json:"statements"`
+	}{}
+	transaction.Statements = []*Query{statement}
+
+	// prepare request
+	reqData, err := json.Marshal(transaction)
+	if err != nil {
+		return
+	}
+	reqBuf := bytes.NewBuffer(reqData)
+	req, err := http.NewRequest("POST", uri, reqBuf)
+	if err != nil {
+		return
+	}
+	// add headers
+	req.Header.Add("Accept", "application/json; charset=UTF-8")
+	req.Header.Add("Content-Type", "application/json")
+
+	// make request
+	data, err := c.performRequest(req)
+	if err != nil {
+		return
+	}
+
+	// unmarshal our QueryResponse
+	resp := &QueryResponse{}
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return
+	}
+
+	// handle error messages
+	if len(resp.Errors) > 0 {
+		err = errors.New(resp.Errors[0].Code + ": " + resp.Errors[0].Message)
+		return
+	}
+	if len(resp.Results) == 0 {
+		return
+	}
+
+	// deliberately passed single transaction statement, expecting only one result
+	result := resp.Results[0]
+
+	rows = make([]*map[string]interface{}, len(result.Rows))
+
+	for ri, row := range result.Rows {
+		rm := make(map[string]interface{}) // row map
+		for ci, colVal := range row.Cols {
+			n := result.ColumnNames[ci]
+			rm[n] = colVal
+		}
+		rows[ri] = &rm
+	}
+
+	return
 }

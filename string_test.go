@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestJoin(t *testing.T) {
+func TestStringJoining(t *testing.T) {
 
 	// join a string as a path
 	joined := joinPath([]string{"resources", "123"})
@@ -23,21 +23,17 @@ func TestJoin(t *testing.T) {
 	if joined != "this#that" {
 		t.Error("joined result was: %v", joined)
 	}
+}
 
-	// create a timestamp (epoch in nanoseconds)
-	ts := generateTimestamp()
-	if ts <= 0 {
-		t.Error("couldn't create timestamp, was: %v\n", ts)
-	}
+func TestCypherGeneration(t *testing.T) {
 
 	// create cypher node from parameters
 	props := make(map[string]interface{})
 	props["car"] = "My Car"
 	props["bar"] = 3
 	//props["jar"] = 45.0 // TODO support floats
-	cypherizedNode := cypherizeNode("Thing", props, "t")
+	cypherizedNode := propsToCypherString("Thing", props, "t")
 	if cypherizedNode != "(t:Thing { car: 'My Car', bar: 3 })" {
 		t.Error("cypherized node is inaccurate: %v\n", cypherizedNode)
 	}
-
 }

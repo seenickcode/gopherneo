@@ -38,17 +38,9 @@ func NewConnection(uri string) (c *Connection, err error) {
 	req.Header.Add("Content-Type", "application/json")
 
 	// perform request
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return
-	}
-	// get bytes from body
-	data, err := ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		return
-	}
-	// deserialize
+	data, err := c.performRequest(req) // gets []byte
+
+	// unmarshal to Connection obj
 	err = json.Unmarshal(data, &c)
 	if err != nil {
 		return

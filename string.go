@@ -3,13 +3,7 @@ package gopherneo
 import (
 	"bytes"
 	"strconv"
-	"testing"
-	"time"
-	"runtime"
 )
-
-// string utils
-//
 
 func joinPath(strings []string) string {
 	return joinUsing(strings, "/")
@@ -34,29 +28,7 @@ func joinUsing(strings []string, delimiter string) string {
 	return buffer.String()
 }
 
-// generators
-//
-
-func generateTimestamp() int64 {
-	return time.Now().UnixNano()
-}
-
-// testing
-//
-
-func assertOk(t *testing.T, err error) {
-	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
-		lineNo := strconv.Itoa(line)
-		t.Errorf(file + ":" + lineNo + ": %# v\n", err)
-		t.Error(err)
-	}
-}
-
-// experimental
-//
-
-func cypherizeNode(label string, props map[string]interface{}, alias string) (result string) {
+func propsToCypherString(label string, props map[string]interface{}, alias string) (result string) {
 
 	// create a slice of keys, values
 	propParts := []string{}
@@ -68,7 +40,7 @@ func cypherizeNode(label string, props map[string]interface{}, alias string) (re
 			value = strconv.Itoa(v.(int))
 		// TODO support floats. ** figure out how to convert float to string **
 		// case float64:
-		// 	value, _ = strconv.ParseFloat(v.(string), 64)
+		//  value, _ = strconv.ParseFloat(v.(string), 64)
 		case string:
 			value = ("'" + v.(string) + "'")
 		default:

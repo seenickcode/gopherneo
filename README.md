@@ -96,13 +96,13 @@ curl -X POST \
         "resultDataContents" : [ "REST" ],
         "parameters": {
           "props": {
-            "name": "99165298374233",
+            "name": "917293432",
             "age": "34"
           }
         }
       }]
   }' \
-  http://localhost:7474/db/data/transaction
+  http://localhost:7474/db/data/transaction/commit
 
 
  ````
