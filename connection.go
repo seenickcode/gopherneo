@@ -1,7 +1,9 @@
 package gopherneo
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -21,6 +23,34 @@ type Connection struct {
 	// ExtInfoURI     string      `json:"extensions_info"`
 	// RelTypesURI    string      `json:"relationship_types"`
 	// BatchURI       string      `json:"batch"`
+}
+
+type TransactionStatement struct {
+	Cypher      string                 `json:"statement"`
+	Params      map[string]interface{} `json:"parameters"`
+	ResultTypes []string               `json:"resultDataContents"`
+}
+
+type TransactionResponse struct {
+	Results []TransactionResult `json:"results"`
+	Errors  []TransactionError  `json:"errors"`
+}
+
+type TransactionError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// represents a transactional response result
+type TransactionResult struct {
+	Columns []string                `json:"columns"`
+	Data    []TransactionResultData `json:"data"`
+}
+
+type TransactionResultData struct {
+	RowData   []*json.RawMessage `json:"row"`
+	RestData  []*json.RawMessage `json:"rest"`
+	GraphData []*json.RawMessage `json:"graph"`
 }
 
 // get the Neo4j "service root"
@@ -45,6 +75,62 @@ func NewConnection(uri string) (c *Connection, err error) {
 	if err != nil {
 		return
 	}
+	return
+}
+
+func (c *Connection) Query(cypher string, params *map[string]interface{}) (rows []*json.RawMessage, err error) {
+
+	statement := &TransactionStatement{
+		Cypher:      cypher,
+		Params:      *params,
+		ResultTypes: []string{"ROW"},
+	}
+
+	// create a new transaction for one single statement
+	// http://neo4j.com/docs/stable/rest-api-transactional.html#rest-api-begin-and-commit-a-transaction-in-one-request
+	transaction := struct {
+		Statements []*TransactionStatement `json:"statements"`
+	}{}
+	transaction.Statements = []*TransactionStatement{statement}
+
+	// prepare request
+	reqData, err := json.Marshal(transaction)
+	if err != nil {
+		return
+	}
+	reqBuf := bytes.NewBuffer(reqData)
+	uri := joinPath([]string{c.TransactionURI, "commit"})
+	req, err := http.NewRequest("POST", uri, reqBuf)
+	if err != nil {
+		return
+	}
+	req.Header.Add("Accept", "application/json; charset=UTF-8")
+	req.Header.Add("Content-Type", "application/json")
+
+	// make request
+	data, err := c.performRequest(req)
+	if err != nil {
+		return
+	}
+	resp := &TransactionResponse{}
+	err = json.Unmarshal(data, &resp)
+	if err != nil {
+		return
+	}
+	if len(resp.Errors) > 0 {
+		err = fmt.Errorf("%v: %v", resp.Errors[0].Code, resp.Errors[0].Message)
+		return
+	}
+	if len(resp.Results) == 0 {
+		return
+	}
+
+	// expecting only one result, since it's a single statement transaction
+	result := resp.Results[0]
+
+	// since we only asked for ROW results, just return that
+	rows = result.Data[0].RowData
+
 	return
 }
 

@@ -1,31 +1,32 @@
 package gopherneo
 
 import (
-	"regexp"
-	"strconv"
+	"encoding/json"
+	"fmt"
 )
 
-type Node struct {
-	Data            map[string]interface{} `json:"data"`
-	SelfURI         string                 `json:"self"`
-	LabelsURI       string                 `json:"labels"`
-	PropertiesURI   string                 `json:"properties"`
-	OutgoingRelsURI string                 `json:"outgoing_relationships"`
-	IncomingRelsURI string                 `json:"incoming_relationships"`
-	AllRelsURI      string                 `json:"all_relationships"`
-}
+func (c *Connection) CreateNodeWithLabel(label string, props *map[string]interface{}, result interface{}) (err error) {
 
-// ID determines the Neo4j ID of a node.
-// Be warned that Neo4j can change an ID at any time.
-// Do not rely on this value.
-func (n *Node) ID() int {
-	re := regexp.MustCompile("db/data/node/(.+$)")
-	matches := re.FindStringSubmatch(n.SelfURI)
-	if matches != nil && len(matches) > 1 {
-		id, err := strconv.Atoi(matches[1])
-		if err == nil {
-			return id
-		}
+	cypher := fmt.Sprintf(`
+    CREATE (n:%v {p}) RETURN n
+  `, label)
+
+	// add my cypher props to a map[string]interface{}
+	params := &map[string]interface{}{
+		"p": props,
 	}
-	return -1
+
+	rows, err := c.Query(cypher, params)
+	if err != nil {
+		return
+	}
+	if len(rows) != 1 {
+		err = fmt.Errorf("couldn't create node with %v, expected only 1 node", props)
+		return
+	}
+	row := rows[0]
+
+	err = json.Unmarshal(*row, &result)
+
+	return
 }

@@ -25,15 +25,15 @@ func TestStringJoining(t *testing.T) {
 	}
 }
 
-func TestCypherGeneration(t *testing.T) {
+// func TestCypherGeneration(t *testing.T) {
 
-	// create cypher node from parameters
-	props := make(map[string]interface{})
-	props["car"] = "My Car"
-	props["bar"] = 3
-	//props["jar"] = 45.0 // TODO support floats
-	cypherizedNode := propsToCypherString("Thing", props, "t")
-	if cypherizedNode != "(t:Thing { car: 'My Car', bar: 3 })" {
-		t.Error("cypherized node is inaccurate: %v\n", cypherizedNode)
-	}
-}
+// 	// create cypher node from parameters
+// 	props := make(map[string]interface{})
+// 	props["car"] = "My Car"
+// 	props["bar"] = 3
+// 	//props["jar"] = 45.0 // TODO support floats
+// 	cypherizedNode := propsToCypherString("Thing", props, "t")
+// 	if cypherizedNode != "(t:Thing { car: 'My Car', bar: 3 })" {
+// 		t.Error("cypherized node is inaccurate: %v\n", cypherizedNode)
+// 	}
+// }
