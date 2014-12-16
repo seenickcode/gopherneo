@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/tideland/goas/v3/logger"
 )
 
 type Connection struct {
@@ -57,6 +59,8 @@ type TransactionResultData struct {
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
 func NewConnection(uri string) (c *Connection, err error) {
 
+	logger.SetLevel(logger.LevelDebug)
+
 	c = &Connection{httpClient: &http.Client{}, Uri: uri}
 
 	// prepare request
@@ -78,7 +82,7 @@ func NewConnection(uri string) (c *Connection, err error) {
 	return
 }
 
-func (c *Connection) Query(cypher string, params *map[string]interface{}) (rows []*json.RawMessage, err error) {
+func (c *Connection) Query(cypher string, params *map[string]interface{}) (rows [][]*json.RawMessage, err error) {
 
 	statement := &TransactionStatement{
 		Cypher:      cypher,
@@ -107,6 +111,8 @@ func (c *Connection) Query(cypher string, params *map[string]interface{}) (rows 
 	req.Header.Add("Accept", "application/json; charset=UTF-8")
 	req.Header.Add("Content-Type", "application/json")
 
+	logger.Debugf("%v: %v", cypher, *params)
+
 	// make request
 	data, err := c.performRequest(req)
 	if err != nil {
@@ -128,8 +134,13 @@ func (c *Connection) Query(cypher string, params *map[string]interface{}) (rows 
 	// expecting only one result, since it's a single statement transaction
 	result := resp.Results[0]
 
-	// since we only asked for ROW results, just return that
-	rows = result.Data[0].RowData
+	// copy each 'ROW' type result to what's returned
+	rows = make([][]*json.RawMessage, len(result.Data))
+	if len(result.Data) > 0 {
+		for i, data := range result.Data {
+			rows[i] = data.RowData
+		}
+	}
 
 	return
 }

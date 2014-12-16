@@ -58,7 +58,7 @@ func TestQueryWithProps(t *testing.T) {
 	row := rows[0]
 
 	newThing := &Thing{}
-	err = json.Unmarshal(*row, &newThing)
+	err = json.Unmarshal(*row[0], &newThing)
 	if err != nil {
 		t.Error(err)
 	}
