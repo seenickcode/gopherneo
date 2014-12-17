@@ -13,6 +13,10 @@ type Thing struct {
 	CreatedAt float64 `json:"created_at",float64`
 }
 
+type ThingLinksToThingRel struct {
+	Timestamp float64 `json:"timestamp",float64`
+}
+
 func UnmarshalThings(rows [][]*json.RawMessage) []Thing {
 	things := make([]Thing, 2)
 	for i, row := range rows {
@@ -132,6 +136,52 @@ func TestCreateNode(t *testing.T) {
 	}
 	if newThing.Age != age1 {
 		t.Errorf("age doesn't match, was '%v', should be '%v'", newThing.Age, age1)
+	}
+
+	// cleanup
+	err = db.DeleteNodes("Thing", "name", name1)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestLinkNodes(t *testing.T) {
+
+	db, err := NewConnection("http://localhost:7474/db/data")
+
+	db.DeleteNodes("Thing", "", "")
+
+	// create node 1
+	name1 := "joebob1"
+	props1 := &map[string]interface{}{
+		"name": name1,
+	}
+	err = db.CreateNode("Thing", props1, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	// create node 2
+	name2 := "joebob2"
+	props2 := &map[string]interface{}{
+		"name": name2,
+	}
+	err = db.CreateNode("Thing", props2, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// link nodes
+	timestamp1 := float64(time.Now().UnixNano()) // convert int64 -> float64
+	relProps := &map[string]interface{}{
+		"timestamp": timestamp1,
+	}
+	thingRel := &ThingLinksToThingRel{}
+	err = db.LinkNodes("Thing", "name", name1, "Thing", "name", name2, "LINKS_TO", relProps, &thingRel)
+	if err != nil {
+		t.Error(err)
+	}
+	if thingRel.Timestamp != timestamp1 {
+		t.Errorf("timestamp for rel doesn't match, was '%v', should be '%v'", thingRel.Timestamp, timestamp1)
 	}
 
 	// cleanup

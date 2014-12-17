@@ -8,7 +8,7 @@ import (
 	"github.com/tideland/goas/v2/logger"
 )
 
-func (c *Connection) FindNode(label string, key string, val string, result interface{}) (err error) {
+func (c *Connection) FindNode(label string, key string, val interface{}, result interface{}) (err error) {
 
 	logger.Debugf("fetching %v node where '%v'='%v'", label, key, val)
 
@@ -31,7 +31,7 @@ func (c *Connection) FindNode(label string, key string, val string, result inter
 	return
 }
 
-func (c *Connection) FindNodesWithValuePaginated(label string, key string, val string, pg int, pgSize int) (rows [][]*json.RawMessage, err error) {
+func (c *Connection) FindNodesWithValuePaginated(label string, key string, val interface{}, pg int, pgSize int) (rows [][]*json.RawMessage, err error) {
 
 	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
 
@@ -93,7 +93,7 @@ func (c *Connection) CreateNode(label string, props *map[string]interface{}, res
 	return
 }
 
-func (c *Connection) UpdateNode(label string, key string, val string, props *map[string]interface{}, result interface{}) (err error) {
+func (c *Connection) UpdateNode(label string, key string, val interface{}, props *map[string]interface{}, result interface{}) (err error) {
 
 	logger.Debugf("updating %v node with: %v", label, *props)
 
@@ -139,7 +139,7 @@ func (c *Connection) UpdateNode(label string, key string, val string, props *map
 	return
 }
 
-func (c *Connection) DeleteNodes(label string, key string, val string) (err error) {
+func (c *Connection) DeleteNodes(label string, key string, val interface{}) (err error) {
 
 	logger.Debugf("deleting %v node where '%v'='%v'", label, key, val)
 
@@ -167,6 +167,42 @@ func (c *Connection) DeleteNodes(label string, key string, val string) (err erro
 	return
 }
 
+// LinkNodes requires that keys and values provided have unique properties for those fields
+func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 string, key2 string, val2 string, relName string, relProps *map[string]interface{}, relStruct interface{}) (err error) {
+
+	logger.Debugf("linking %v node where '%v'='%v' to %v node where '%v'='%v'", label1, key1, val1, label2, key2, val2)
+
+	if len(label1) == 0 || len(label2) == 0 {
+		err = fmt.Errorf("labels are required to link nodes")
+		return
+	}
+	if len(relName) == 0 {
+		err = fmt.Errorf("relName is required to link nodes")
+		return
+	}
+
+	cypher := fmt.Sprintf(`
+      MATCH (n1:%v), (n2:%v)
+      WHERE n1.%v={val1} AND n2.%v={val2}
+      CREATE UNIQUE (n1)-[r:%v {relProps}]->(n2)
+      RETURN r`, label1, label2, key1, key2, relName)
+
+	params := &map[string]interface{}{
+		"val1":     val1,
+		"val2":     val2,
+		"relProps": relProps,
+	}
+
+	rows, err := c.ExecuteCypher(cypher, params)
+
+	if err == nil {
+		row := rows[0] // []*json.RawMessage
+		err = json.Unmarshal(*row[0], &relStruct)
+	}
+
+	return
+}
+
 func cypherForSetProps(alias string, props *map[string]interface{}) (cypher string, params map[string]interface{}) {
 
 	params = make(map[string]interface{})
@@ -183,9 +219,9 @@ func cypherForSetProps(alias string, props *map[string]interface{}) (cypher stri
 	return
 }
 
-func cypherForWhere(alias string, key string, val string, inclKeyword bool) (cypher string, params map[string]interface{}) {
+func cypherForWhere(alias string, key string, val interface{}, inclKeyword bool) (cypher string, params map[string]interface{}) {
 	var b bytes.Buffer
-	if len(key) > 0 && len(val) > 0 {
+	if len(key) > 0 {
 		if inclKeyword {
 			b.WriteString("WHERE ")
 		}
