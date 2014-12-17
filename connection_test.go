@@ -47,7 +47,7 @@ func TestQueryWithProps(t *testing.T) {
 		"myprops": props,
 	}
 
-	rows, err := db.Query(cypher1, params)
+	rows, err := db.ExecuteCypher(cypher1, params)
 	if err != nil {
 		t.Error(err)
 	}

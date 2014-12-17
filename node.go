@@ -8,36 +8,25 @@ import (
 	"github.com/tideland/goas/v2/logger"
 )
 
-func (c *Connection) CreateNodeWithLabel(label string, props *map[string]interface{}, result interface{}) (err error) {
+func (c *Connection) FindNode(label string, key string, val string, result interface{}) (err error) {
 
-	logger.Debugf("creating %v node with: %v", label, *props)
+	logger.Debugf("fetching %v node where '%v'='%v'", label, key, val)
 
 	if len(label) == 0 {
-		err = fmt.Errorf("a label is required to create a node")
+		err = fmt.Errorf("a label is required to find nodes")
 		return
 	}
 
-	cypher := fmt.Sprintf(`CREATE (n:%v {p}) RETURN n`, label)
-
-	// add my cypher props to a map[string]interface{}
-	params := &map[string]interface{}{
-		"p": props,
-	}
-
-	rows, err := c.Query(cypher, params)
-	if err != nil {
+	rows, err := c.FindNodesWithValuePaginated(label, key, val, 0, 0)
+	if err != nil || len(rows) == 0 {
 		return
 	}
-	if len(rows) != 1 {
-		err = fmt.Errorf("couldn't create node with %v, expected only 1 node", props)
+	if len(rows) > 1 {
+		err = fmt.Errorf("found more than one %v node where '%v'='%v'", label, key, val)
 		return
 	}
 	row := rows[0] // []*json.RawMessage
-
-	// convert our single transaction result
-	if result != nil {
-		err = json.Unmarshal(*row[0], &result)
-	}
+	err = json.Unmarshal(*row[0], &result)
 
 	return
 }
@@ -53,24 +42,98 @@ func (c *Connection) FindNodesWithValuePaginated(label string, key string, val s
 
 	// determine where part
 	params := &map[string]interface{}{}
-	wherePart, whereParams := cypherForWhere("n", key, val, true)
-	if len(*whereParams) > 0 {
-		params = whereParams
+	whereCypher, whereParams := cypherForWhere("n", key, val, true)
+	if len(whereParams) > 0 {
+		*params = whereParams
 	}
 	pagPart := cypherForPagination(pg, pgSize)
 
 	parts := []string{
 		fmt.Sprintf("MATCH (n:%v)", label),
-		wherePart,
+		whereCypher,
 		"RETURN n",
 		pagPart,
 	}
 
 	cypher := joinUsing(parts, " ")
 
-	rows, err = c.Query(cypher, params)
+	rows, err = c.ExecuteCypher(cypher, params)
 	if err != nil {
 		return
+	}
+
+	return
+}
+
+func (c *Connection) CreateNode(label string, props *map[string]interface{}, result interface{}) (err error) {
+
+	logger.Debugf("creating %v node with: %v", label, *props)
+
+	if len(label) == 0 {
+		err = fmt.Errorf("a label is required to create a node")
+		return
+	}
+
+	cypher := fmt.Sprintf(`CREATE (n:%v {p}) RETURN n`, label)
+
+	// add my cypher props to a map[string]interface{}
+	params := &map[string]interface{}{
+		"p": props,
+	}
+
+	rows, err := c.ExecuteCypher(cypher, params)
+	if err != nil {
+		return
+	}
+	if result != nil && len(rows) == 1 {
+		row := rows[0] // []*json.RawMessage
+		err = json.Unmarshal(*row[0], &result)
+	}
+
+	return
+}
+
+func (c *Connection) UpdateNode(label string, key string, val string, props *map[string]interface{}, result interface{}) (err error) {
+
+	logger.Debugf("updating %v node with: %v", label, *props)
+
+	if len(label) == 0 {
+		err = fmt.Errorf("a label is required to update a node")
+		return
+	}
+
+	params := make(map[string]interface{})
+
+	// normally we'd use 'SET {props}' but that replaces _all_ the node's props
+	// and here we want to do it with only the props the user provides
+	setCypher, setParams := cypherForSetProps("n", props)
+	// copy params
+	for k, v := range setParams {
+		params[k] = v
+	}
+
+	whereCypher, whereParams := cypherForWhere("n", key, val, true)
+	// copy params
+	for k, v := range whereParams {
+		params[k] = v
+	}
+
+	parts := []string{
+		fmt.Sprintf("MATCH (n:%v)", label),
+		whereCypher,
+		setCypher,
+		"RETURN n",
+	}
+
+	cypher := joinUsing(parts, " ")
+
+	rows, err := c.ExecuteCypher(cypher, &params)
+	if err != nil {
+		return
+	}
+	if result != nil && len(rows) == 1 {
+		row := rows[0] // []*json.RawMessage
+		err = json.Unmarshal(*row[0], &result)
 	}
 
 	return
@@ -85,37 +148,50 @@ func (c *Connection) DeleteNodes(label string, key string, val string) (err erro
 		return
 	}
 
-	// determine where part
 	params := &map[string]interface{}{}
-	wherePart, whereParams := cypherForWhere("n", key, val, true)
-	if len(*whereParams) > 0 {
-		params = whereParams
+	whereCypher, whereParams := cypherForWhere("n", key, val, true)
+	if len(whereParams) > 0 {
+		*params = whereParams
 	}
 
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("MATCH (n:%v) ", label))
-	buffer.WriteString(wherePart)
-	buffer.WriteString("OPTIONAL MATCH (n)-[r]-() DELETE n, r")
+	parts := []string{
+		fmt.Sprintf("MATCH (n:%v)", label),
+		whereCypher,
+		"OPTIONAL MATCH (n)-[r]-() DELETE n, r",
+	}
 
-	cypher := buffer.String()
+	cypher := joinUsing(parts, " ")
 
-	_, err = c.Query(cypher, params)
+	_, err = c.ExecuteCypher(cypher, params)
 
 	return
 }
 
-func cypherForWhere(alias string, key string, val string, inclKeyword bool) (cypher string, params *map[string]interface{}) {
-	params = &map[string]interface{}{}
+func cypherForSetProps(alias string, props *map[string]interface{}) (cypher string, params map[string]interface{}) {
 
+	params = make(map[string]interface{})
+
+	parts := make([]string, len(*props))
+	i := 0
+	for key, val := range *props {
+		paramKey := fmt.Sprintf("setval%d", i)
+		parts[i] = fmt.Sprintf("n.%v={%v}", key, paramKey)
+		params[paramKey] = val
+		i++
+	}
+	cypher = "SET " + joinUsing(parts, ", ")
+	return
+}
+
+func cypherForWhere(alias string, key string, val string, inclKeyword bool) (cypher string, params map[string]interface{}) {
 	var b bytes.Buffer
 	if len(key) > 0 && len(val) > 0 {
 		if inclKeyword {
 			b.WriteString("WHERE ")
 		}
-		b.WriteString(fmt.Sprintf("%v.%v={val}", alias, key))
-		params = &map[string]interface{}{
-			"val": val,
-		}
+		b.WriteString(fmt.Sprintf("%v.%v={whereval}", alias, key))
+		params = make(map[string]interface{})
+		params["whereval"] = val
 	}
 	cypher = b.String()
 	return

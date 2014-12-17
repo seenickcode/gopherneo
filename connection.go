@@ -45,15 +45,25 @@ type TransactionError struct {
 
 // represents a transactional response result
 type TransactionResult struct {
-	Columns []string                `json:"columns"`
-	Data    []TransactionResultData `json:"data"`
+	Columns []string                        `json:"columns"`
+	Data    []map[string][]*json.RawMessage `json:"data"`
 }
 
-type TransactionResultData struct {
-	RowData   []*json.RawMessage `json:"row"`
-	RestData  []*json.RawMessage `json:"rest"`
-	GraphData []*json.RawMessage `json:"graph"`
+func (r *TransactionResult) RowData() (rows [][]*json.RawMessage) {
+	rows = make([][]*json.RawMessage, len(r.Data))
+	for i, resultType := range r.Data {
+		if val, ok := resultType["row"]; ok {
+			rows[i] = val
+		}
+	}
+	return
 }
+
+// type TransactionResultData struct {
+// 	RowData   []*json.RawMessage `json:"row"`
+// 	RestData  []*json.RawMessage `json:"rest"`
+// 	GraphData []*json.RawMessage `json:"graph"`
+// }
 
 // get the Neo4j "service root"
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
@@ -82,7 +92,9 @@ func NewConnection(uri string) (c *Connection, err error) {
 	return
 }
 
-func (c *Connection) Query(cypher string, params *map[string]interface{}) (rows [][]*json.RawMessage, err error) {
+// ExecuteCypher will return a slice of "rows", each "row" is a []*json.RawMessage representing
+// a slice of node properties that the user can unmarshal themselves
+func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}) (rows [][]*json.RawMessage, err error) {
 
 	statement := &TransactionStatement{
 		Cypher:      cypher,
@@ -132,15 +144,7 @@ func (c *Connection) Query(cypher string, params *map[string]interface{}) (rows 
 	}
 
 	// expecting only one result, since it's a single statement transaction
-	result := resp.Results[0]
-
-	// copy each 'ROW' type result to what's returned
-	rows = make([][]*json.RawMessage, len(result.Data))
-	if len(result.Data) > 0 {
-		for i, data := range result.Data {
-			rows[i] = data.RowData
-		}
-	}
+	rows = resp.Results[0].RowData()
 
 	return
 }
