@@ -11,29 +11,23 @@ For comprehensive, up to date documentation and code examples, checkout the wiki
 
 # Completed Features
 ==
-* connect to neo
-* get node by label, id
-* get node by label, property, value
 * execute a cypher query
-* create node
+* get node with label, property
+* get nodes with property, paginated
+* create node with label, properties
+* update a node
+* delete node
+* link nodes
 
 # Feature Roadmap
 ==
-## HIGH
-* create unique node with label and properties
-* set node/relationship properties
-* execute cypher query, return nodes/relationships
-* execute cypher query, return list of properties
-* remove node property
-* delete node
+## High Priority Features
+* solution for passing order by option for listing nodes
+* set relationship properties
 
-## MEDIUM (convenience)
-* link node to another node
-* unlink node from another node
-* list node's linked nodes
-   - specifcy order, pagination
-* list node's relationships
-   - specify order, pagination
+## Medium Priority Features
+
+## Low Priority Features
 
 ### Troubleshooting via Curl Examples
 

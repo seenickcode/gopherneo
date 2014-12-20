@@ -8,7 +8,7 @@ import (
 	"github.com/tideland/goas/v2/logger"
 )
 
-func (c *Connection) FindNode(label string, key string, val interface{}, result interface{}) (err error) {
+func (c *Connection) FindNode(label string, key string, val interface{}, result interface{}) (found bool, err error) {
 
 	logger.Debugf("fetching %v node where '%v'='%v'", label, key, val)
 
@@ -17,7 +17,7 @@ func (c *Connection) FindNode(label string, key string, val interface{}, result 
 		return
 	}
 
-	rows, err := c.FindNodesWithValuePaginated(label, key, val, 0, 0)
+	rows, err := c.FindNodesWithValuePaginated(label, key, val, "", 0, 0)
 	if err != nil || len(rows) == 0 {
 		return
 	}
@@ -25,14 +25,16 @@ func (c *Connection) FindNode(label string, key string, val interface{}, result 
 		err = fmt.Errorf("found more than one %v node where '%v'='%v'", label, key, val)
 		return
 	}
-	row := rows[0] // []*json.RawMessage
-	err = json.Unmarshal(*row[0], &result)
+	if len(rows) == 1 {
+		row := rows[0] // []*json.RawMessage
+		err = json.Unmarshal(*row[0], &result)
+		found = true
+	}
 
 	return
 }
 
-func (c *Connection) FindNodesWithValuePaginated(label string, key string, val interface{}, pg int, pgSize int) (rows [][]*json.RawMessage, err error) {
-
+func (c *Connection) FindNodesWithValuePaginated(label string, key string, val interface{}, orderClause string, pg int, pgSize int) (rows [][]*json.RawMessage, err error) {
 	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
 
 	if len(label) == 0 {
@@ -48,10 +50,14 @@ func (c *Connection) FindNodesWithValuePaginated(label string, key string, val i
 	}
 	pagPart := cypherForPagination(pg, pgSize)
 
+	// TODO ghetto. pass in order object instead of strings
+	orderPart := orderClause
+
 	parts := []string{
 		fmt.Sprintf("MATCH (n:%v)", label),
 		whereCypher,
 		"RETURN n",
+		orderPart,
 		pagPart,
 	}
 

@@ -46,12 +46,21 @@ func TestFindNode(t *testing.T) {
 
 	// find the node
 	fetchedThing := &Thing{}
-	err = db.FindNode("Thing", "name", name1, &fetchedThing)
+	found, err := db.FindNode("Thing", "name", name1, &fetchedThing)
 	if err != nil {
 		t.Error(err)
 	}
+	if found == false {
+		t.Errorf("Found flag should have been true")
+	}
 	if fetchedThing.Name != newThing.Name {
 		t.Errorf("created thing named '%v' didn't match fetched thing named '%v'", newThing.Name, fetchedThing.Name)
+	}
+
+	// find a missing node
+	found, err = db.FindNode("Thing", "name", "abc123", &fetchedThing)
+	if found != false {
+		t.Errorf("Found should have been false")
 	}
 
 	// cleanup
@@ -82,7 +91,7 @@ func TestFindNodesWithValuesPaginated(t *testing.T) {
 	}
 
 	// get all nodes
-	rows, err := db.FindNodesWithValuePaginated("Thing", "", "", 0, 0)
+	rows, err := db.FindNodesWithValuePaginated("Thing", "", "", "", 0, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -91,14 +100,14 @@ func TestFindNodesWithValuesPaginated(t *testing.T) {
 	}
 
 	// ensure pagination page 1 results are accurate
-	rows, err = db.FindNodesWithValuePaginated("Thing", "", "", 0, 2)
+	rows, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 0, 2)
 	things := UnmarshalThings(rows)
 	expectedName1 := "joebobby1"
 	if things[1].Name != expectedName1 {
 		t.Errorf("expected paginated result to be called '%v' and it's called '%v'", expectedName1, things[1].Name)
 	}
 	// ensure pagination page 2 results are accurate
-	rows, err = db.FindNodesWithValuePaginated("Thing", "", "", 1, 2)
+	rows, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 1, 2)
 	things = UnmarshalThings(rows)
 	expectedName2 := "joebobby3"
 	if things[1].Name != expectedName2 {
