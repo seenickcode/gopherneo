@@ -49,14 +49,9 @@ type TransactionResult struct {
 	Data    []map[string][]*json.RawMessage `json:"data"`
 }
 
-func (r *TransactionResult) RowData() (rows [][]*json.RawMessage) {
-	rows = make([][]*json.RawMessage, len(r.Data))
-	for i, resultType := range r.Data {
-		if val, ok := resultType["row"]; ok {
-			rows[i] = val
-		}
-	}
-	return
+type CypherResult struct {
+	ColumnNames []string
+	Rows        []json.RawMessage
 }
 
 // type TransactionResultData struct {
@@ -69,7 +64,7 @@ func (r *TransactionResult) RowData() (rows [][]*json.RawMessage) {
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
 func NewConnection(uri string) (c *Connection, err error) {
 
-	logger.SetLevel(logger.LevelDebug)
+	logger.SetLevel(logger.LevelCritical)
 
 	c = &Connection{httpClient: &http.Client{}, Uri: uri}
 
@@ -94,7 +89,7 @@ func NewConnection(uri string) (c *Connection, err error) {
 
 // ExecuteCypher will return a slice of "rows", each "row" is a []*json.RawMessage representing
 // a slice of node properties that the user can unmarshal themselves
-func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}) (rows [][]*json.RawMessage, err error) {
+func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}) (cr CypherResult, err error) {
 
 	statement := &TransactionStatement{
 		Cypher:      cypher,
@@ -144,19 +139,27 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 	}
 
 	// expecting only one result, since it's a single statement transaction
-	rows = resp.Results[0].RowData()
+	tr := resp.Results[0] // TransactionResult
 
+	// copy cols and rows into a CypherResult
+	cr.ColumnNames = tr.Columns
+	cr.Rows = make([]json.RawMessage, len(tr.Data))
+	for i, rType := range tr.Data {
+		if val, ok := rType["row"]; ok {
+			if len(val) > 0 {
+				cr.Rows[i] = *val[0]
+			}
+		}
+	}
 	return
 }
 
 func (c *Connection) performRequest(req *http.Request) (data []byte, err error) {
-
 	// perform request
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return
 	}
-
 	// get bytes from body
 	data, err = ioutil.ReadAll(res.Body)
 	defer res.Body.Close()

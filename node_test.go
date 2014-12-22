@@ -17,11 +17,11 @@ type ThingLinksToThingRel struct {
 	Timestamp float64 `json:"timestamp",float64`
 }
 
-func UnmarshalThings(rows [][]*json.RawMessage) []Thing {
+func UnmarshalThings(rows []json.RawMessage) []Thing {
 	things := make([]Thing, 2)
 	for i, row := range rows {
 		thing := &Thing{}
-		err := json.Unmarshal(*row[0], thing)
+		err := json.Unmarshal(row, thing)
 		if err == nil {
 			things[i] = *thing
 		}
@@ -91,24 +91,24 @@ func TestFindNodesWithValuesPaginated(t *testing.T) {
 	}
 
 	// get all nodes
-	rows, err := db.FindNodesWithValuePaginated("Thing", "", "", "", 0, 0)
+	cr, err := db.FindNodesWithValuePaginated("Thing", "", "", "", 0, 0)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(rows) != numNodes {
-		t.Errorf("found %d nodes, expected %d: %v", len(rows), numNodes, rows)
+	if len(cr.Rows) != numNodes {
+		t.Errorf("found %d nodes, expected %d: %v", len(cr.Rows), numNodes, cr.Rows)
 	}
 
 	// ensure pagination page 1 results are accurate
-	rows, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 0, 2)
-	things := UnmarshalThings(rows)
+	cr, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 0, 2)
+	things := UnmarshalThings(cr.Rows)
 	expectedName1 := "joebobby1"
 	if things[1].Name != expectedName1 {
 		t.Errorf("expected paginated result to be called '%v' and it's called '%v'", expectedName1, things[1].Name)
 	}
 	// ensure pagination page 2 results are accurate
-	rows, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 1, 2)
-	things = UnmarshalThings(rows)
+	cr, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 1, 2)
+	things = UnmarshalThings(cr.Rows)
 	expectedName2 := "joebobby3"
 	if things[1].Name != expectedName2 {
 		t.Errorf("expected paginated result to be called '%v' and it's called '%v'", expectedName2, things[1].Name)

@@ -47,18 +47,16 @@ func TestQueryWithProps(t *testing.T) {
 		"myprops": props,
 	}
 
-	rows, err := db.ExecuteCypher(cypher1, params)
+	cr, err := db.ExecuteCypher(cypher1, params)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(rows) != 1 {
+	if len(cr.Rows) != 1 {
 		t.Errorf("returned rows not 1, query was: %v", cypher1)
 	}
 
-	row := rows[0]
-
 	newThing := &Thing{}
-	err = json.Unmarshal(*row[0], &newThing)
+	err = json.Unmarshal(cr.Rows[0], &newThing)
 	if err != nil {
 		t.Error(err)
 	}

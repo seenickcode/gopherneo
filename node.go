@@ -17,24 +17,23 @@ func (c *Connection) FindNode(label string, key string, val interface{}, result 
 		return
 	}
 
-	rows, err := c.FindNodesWithValuePaginated(label, key, val, "", 0, 0)
-	if err != nil || len(rows) == 0 {
+	cr, err := c.FindNodesWithValuePaginated(label, key, val, "", 0, 0)
+	if err != nil || len(cr.Rows) == 0 {
 		return
 	}
-	if len(rows) > 1 {
+	if len(cr.Rows) > 1 {
 		err = fmt.Errorf("found more than one %v node where '%v'='%v'", label, key, val)
 		return
 	}
-	if len(rows) == 1 {
-		row := rows[0] // []*json.RawMessage
-		err = json.Unmarshal(*row[0], &result)
+	if len(cr.Rows) == 1 {
+		err = json.Unmarshal(cr.Rows[0], &result)
 		found = true
 	}
 
 	return
 }
 
-func (c *Connection) FindNodesWithValuePaginated(label string, key string, val interface{}, orderClause string, pg int, pgSize int) (rows [][]*json.RawMessage, err error) {
+func (c *Connection) FindNodesWithValuePaginated(label string, key string, val interface{}, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
 	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
 
 	if len(label) == 0 {
@@ -63,7 +62,7 @@ func (c *Connection) FindNodesWithValuePaginated(label string, key string, val i
 
 	cypher := joinUsing(parts, " ")
 
-	rows, err = c.ExecuteCypher(cypher, params)
+	cr, err = c.ExecuteCypher(cypher, params)
 	if err != nil {
 		return
 	}
@@ -71,7 +70,7 @@ func (c *Connection) FindNodesWithValuePaginated(label string, key string, val i
 	return
 }
 
-func (c *Connection) CreateNode(label string, props *map[string]interface{}, result interface{}) (err error) {
+func (c *Connection) CreateNode(label string, props *map[string]interface{}, node interface{}) (err error) {
 
 	logger.Debugf("creating %v node with: %v", label, *props)
 
@@ -87,19 +86,18 @@ func (c *Connection) CreateNode(label string, props *map[string]interface{}, res
 		"p": props,
 	}
 
-	rows, err := c.ExecuteCypher(cypher, params)
+	cr, err := c.ExecuteCypher(cypher, params)
 	if err != nil {
 		return
 	}
-	if result != nil && len(rows) == 1 {
-		row := rows[0] // []*json.RawMessage
-		err = json.Unmarshal(*row[0], &result)
+	if node != nil && len(cr.Rows) == 1 {
+		err = json.Unmarshal(cr.Rows[0], &node)
 	}
 
 	return
 }
 
-func (c *Connection) UpdateNode(label string, key string, val interface{}, props *map[string]interface{}, result interface{}) (err error) {
+func (c *Connection) UpdateNode(label string, key string, val interface{}, props *map[string]interface{}, node interface{}) (err error) {
 
 	logger.Debugf("updating %v node with: %v", label, *props)
 
@@ -133,13 +131,12 @@ func (c *Connection) UpdateNode(label string, key string, val interface{}, props
 
 	cypher := joinUsing(parts, " ")
 
-	rows, err := c.ExecuteCypher(cypher, &params)
+	cr, err := c.ExecuteCypher(cypher, &params)
 	if err != nil {
 		return
 	}
-	if result != nil && len(rows) == 1 {
-		row := rows[0] // []*json.RawMessage
-		err = json.Unmarshal(*row[0], &result)
+	if node != nil && len(cr.Rows) == 1 {
+		err = json.Unmarshal(cr.Rows[0], &node)
 	}
 
 	return
@@ -174,7 +171,7 @@ func (c *Connection) DeleteNodes(label string, key string, val interface{}) (err
 }
 
 // LinkNodes requires that keys and values provided have unique properties for those fields
-func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 string, key2 string, val2 string, relName string, relProps *map[string]interface{}, relStruct interface{}) (err error) {
+func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 string, key2 string, val2 string, relName string, relProps *map[string]interface{}, resultRel interface{}) (err error) {
 
 	logger.Debugf("linking %v node where '%v'='%v' to %v node where '%v'='%v'", label1, key1, val1, label2, key2, val2)
 
@@ -199,11 +196,12 @@ func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 s
 		"relProps": relProps,
 	}
 
-	rows, err := c.ExecuteCypher(cypher, params)
-
-	if err == nil {
-		row := rows[0] // []*json.RawMessage
-		err = json.Unmarshal(*row[0], &relStruct)
+	cr, err := c.ExecuteCypher(cypher, params)
+	if err != nil {
+		return
+	}
+	if resultRel != nil && len(cr.Rows) > 0 {
+		err = json.Unmarshal(cr.Rows[0], &resultRel)
 	}
 
 	return
@@ -240,13 +238,12 @@ func cypherForWhere(alias string, key string, val interface{}, inclKeyword bool)
 }
 
 func cypherForPagination(pg int, pgSize int) (cypher string) {
-
 	if pg < 0 {
 		pg = 0
 	}
 	if pgSize > 0 {
 		skip := pg * pgSize
-		cypher = cypher + fmt.Sprintf("SKIP %d LIMIT %d", skip, pgSize)
+		cypher = fmt.Sprintf("SKIP %d LIMIT %d", skip, pgSize)
 	}
 	return
 }
