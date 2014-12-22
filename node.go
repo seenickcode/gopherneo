@@ -17,7 +17,7 @@ func (c *Connection) FindNode(label string, key string, val interface{}, result 
 		return
 	}
 
-	cr, err := c.FindNodesWithValuePaginated(label, key, val, "", 0, 0)
+	cr, err := c.FindNodesPaginated(label, key, val, "", 0, 0)
 	if err != nil || len(cr.Rows) == 0 {
 		return
 	}
@@ -33,7 +33,7 @@ func (c *Connection) FindNode(label string, key string, val interface{}, result 
 	return
 }
 
-func (c *Connection) FindNodesWithValuePaginated(label string, key string, val interface{}, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
+func (c *Connection) FindNodesPaginated(label string, key string, val interface{}, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
 	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
 
 	if len(label) == 0 {
@@ -183,6 +183,9 @@ func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 s
 		err = fmt.Errorf("relName is required to link nodes")
 		return
 	}
+	if relProps == nil {
+		relProps = &map[string]interface{}{}
+	}
 
 	cypher := fmt.Sprintf(`
       MATCH (n1:%v), (n2:%v)
@@ -195,13 +198,84 @@ func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 s
 		"val2":     val2,
 		"relProps": relProps,
 	}
-
 	cr, err := c.ExecuteCypher(cypher, params)
 	if err != nil {
 		return
 	}
 	if resultRel != nil && len(cr.Rows) > 0 {
 		err = json.Unmarshal(cr.Rows[0], &resultRel)
+	}
+
+	return
+}
+
+// UnlinkAllNodes removes all relationships of a specific type from a specified node
+func (c *Connection) UnlinkAllNodes(label1 string, key1 string, val1 string, relName string, label2 string) (err error) {
+
+	logger.Debugf("deleting all %v rels to %v nodes from %v node where '%v'='%v' ", relName, label2, label1, key1, val1)
+
+	if len(label1) == 0 || len(label2) == 0 {
+		err = fmt.Errorf("labels are required to unlink nodes")
+		return
+	}
+	if len(relName) == 0 {
+		err = fmt.Errorf("relName is required to unlink nodes")
+		return
+	}
+
+	cypher := fmt.Sprintf(`
+      MATCH (n1:%v)-[r:%v]-(n2:%v)
+      WHERE n1.%v={val1} 
+      DELETE r`, label1, relName, label2, key1)
+
+	params := &map[string]interface{}{
+		"val1": val1,
+	}
+	_, err = c.ExecuteCypher(cypher, params)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (c *Connection) FindAllRelNodesPaginated(label string, key string, val interface{}, relLabel string, relName string, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
+	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
+
+	if len(label) == 0 {
+		err = fmt.Errorf("a label is required to find nodes")
+		return
+	}
+	if len(relName) == 0 {
+		err = fmt.Errorf("relName is required to unlink nodes")
+		return
+	}
+
+	// determine where part
+	params := &map[string]interface{}{
+		"relName": relName,
+	}
+	whereCypher, whereParams := cypherForWhere("n1", key, val, true)
+	if len(whereParams) > 0 {
+		*params = whereParams
+	}
+	pagPart := cypherForPagination(pg, pgSize)
+
+	// TODO ghetto. pass in order object instead of strings
+	orderPart := orderClause
+
+	parts := []string{
+		fmt.Sprintf("MATCH (n1:%v)-[:%v]->(n2:%v)", label, relName, relLabel),
+		whereCypher,
+		"RETURN n2",
+		orderPart,
+		pagPart,
+	}
+
+	cypher := joinUsing(parts, " ")
+
+	cr, err = c.ExecuteCypher(cypher, params)
+	if err != nil {
+		return
 	}
 
 	return

@@ -64,7 +64,7 @@ type CypherResult struct {
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
 func NewConnection(uri string) (c *Connection, err error) {
 
-	logger.SetLevel(logger.LevelCritical)
+	logger.SetLevel(logger.LevelDebug)
 
 	c = &Connection{httpClient: &http.Client{}, Uri: uri}
 
@@ -118,7 +118,7 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 	req.Header.Add("Accept", "application/json; charset=UTF-8")
 	req.Header.Add("Content-Type", "application/json")
 
-	logger.Debugf("%v: %v", cypher, *params)
+	logger.Infof("%v: %v", cypher, *params)
 
 	// make request
 	data, err := c.performRequest(req)

@@ -18,10 +18,13 @@ For comprehensive, up to date documentation and code examples, checkout the wiki
 * update a node
 * delete node
 * link nodes
+* unlink nodes
+* list linked nodes
 
 # Feature Roadmap
 ==
 ## High Priority Features
+* ability to return multiple entire nodes
 * solution for passing order by option for listing nodes
 * set relationship properties
 

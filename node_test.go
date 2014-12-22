@@ -70,7 +70,7 @@ func TestFindNode(t *testing.T) {
 	}
 }
 
-func TestFindNodesWithValuesPaginated(t *testing.T) {
+func TestFindNodessPaginated(t *testing.T) {
 
 	db, err := NewConnection("http://localhost:7474/db/data")
 
@@ -91,7 +91,7 @@ func TestFindNodesWithValuesPaginated(t *testing.T) {
 	}
 
 	// get all nodes
-	cr, err := db.FindNodesWithValuePaginated("Thing", "", "", "", 0, 0)
+	cr, err := db.FindNodesPaginated("Thing", "", "", "", 0, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -100,14 +100,14 @@ func TestFindNodesWithValuesPaginated(t *testing.T) {
 	}
 
 	// ensure pagination page 1 results are accurate
-	cr, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 0, 2)
+	cr, err = db.FindNodesPaginated("Thing", "", "", "ORDER BY n.name ASC", 0, 2)
 	things := UnmarshalThings(cr.Rows)
 	expectedName1 := "joebobby1"
 	if things[1].Name != expectedName1 {
 		t.Errorf("expected paginated result to be called '%v' and it's called '%v'", expectedName1, things[1].Name)
 	}
 	// ensure pagination page 2 results are accurate
-	cr, err = db.FindNodesWithValuePaginated("Thing", "", "", "ORDER BY n.name ASC", 1, 2)
+	cr, err = db.FindNodesPaginated("Thing", "", "", "ORDER BY n.name ASC", 1, 2)
 	things = UnmarshalThings(cr.Rows)
 	expectedName2 := "joebobby3"
 	if things[1].Name != expectedName2 {
@@ -154,7 +154,7 @@ func TestCreateNode(t *testing.T) {
 	}
 }
 
-func TestLinkNodes(t *testing.T) {
+func TestLinkUnlinkNodes(t *testing.T) {
 
 	db, err := NewConnection("http://localhost:7474/db/data")
 
@@ -174,7 +174,13 @@ func TestLinkNodes(t *testing.T) {
 	props2 := &map[string]interface{}{
 		"name": name2,
 	}
-	err = db.CreateNode("Thing", props2, nil)
+	err = db.CreateNode("ThingOther", props2, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// clear possible existing links
+	err = db.UnlinkAllNodes("Thing", "name", name2, "LINKS_TO", "ThingOther")
 	if err != nil {
 		t.Error(err)
 	}
@@ -185,12 +191,51 @@ func TestLinkNodes(t *testing.T) {
 		"timestamp": timestamp1,
 	}
 	thingRel := &ThingLinksToThingRel{}
-	err = db.LinkNodes("Thing", "name", name1, "Thing", "name", name2, "LINKS_TO", relProps, &thingRel)
+	err = db.LinkNodes("Thing", "name", name1, "ThingOther", "name", name2, "LINKS_TO", relProps, &thingRel)
 	if err != nil {
 		t.Error(err)
 	}
 	if thingRel.Timestamp != timestamp1 {
 		t.Errorf("timestamp for rel doesn't match, was '%v', should be '%v'", thingRel.Timestamp, timestamp1)
+	}
+
+	// ensure they're linked
+	linked, err := db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", "", 0, 0)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(linked.Rows) == 0 {
+		t.Errorf("expected 1 linked node, got: %v", linked.Rows)
+	}
+
+	// link nodes without rel props
+	err = db.LinkNodes("Thing", "name", name1, "ThingOther", "name", name2, "LINKS_TO", nil, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// ensure they're linked
+	linked, err = db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", "", 0, 0)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(linked.Rows) == 0 {
+		t.Errorf("expected 2 linked nodes, got: %v", linked.Rows)
+	}
+
+	// delink nodes
+	err = db.UnlinkAllNodes("Thing", "name", name1, "LINKS_TO", "ThingOther")
+	if err != nil {
+		t.Error(err)
+	}
+
+	// ensure nothing else is linked now
+	linked, err = db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", "", 0, 0)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(linked.Rows) != 0 {
+		t.Errorf("exptected 0 nodes to be linked, got: %v", linked.Rows)
 	}
 
 	// cleanup
