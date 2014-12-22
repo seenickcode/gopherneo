@@ -77,6 +77,8 @@ func (c *Connection) UnlinkAllNodes(label1 string, key1 string, val1 string, rel
 func (c *Connection) FindAllRelNodesPaginated(label string, key string, val interface{}, relLabel string, relName string, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
 	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
 
+	// TODO cleaner, more flexible way to specify order
+
 	if len(label) == 0 {
 		err = fmt.Errorf("a label is required to find nodes")
 		return
