@@ -1,15 +1,15 @@
 # gopherneo
 =========
 
-A lean, pragmatic and battle-tested Neo4j driver for Go. GopherNeo ("Go4Neo") conforms strictly to the latest [Neo4j HTTP API](http://docs.neo4j.org/chunked/stable/rest-api.html), supporting only the latest Neo4j 2.x features. 
+Go4Neo is a Neo4j driver for the Go programming language. It's focus is on simple, practical and realistic features that 90% of users working with Neo4j would expect.
 
-For comprehensive, up to date documentation and code examples, checkout the wiki. 
+Compatible with Neo4j 2.x and up.
 
 # Examples
 ==
-(todo)
+- TODO, see test for now
 
-# Completed Features
+# Supported Features
 ==
 * execute a cypher query
 * get node with label, property
@@ -21,87 +21,13 @@ For comprehensive, up to date documentation and code examples, checkout the wiki
 * unlink nodes
 * list linked nodes
 
-# Feature Roadmap
+# Planned Features
 ==
-## High Priority Features
+## High Priority
 * ability to return multiple entire nodes
-* solution for passing order by option for listing nodes
 * set relationship properties
 
-## Medium Priority Features
+## Medium Priority
+* solution for passing order by option for listing nodes
 
-## Low Priority Features
-
-### Troubleshooting via Curl Examples
-
-````
-curl -X POST \
-  -H "Accept: application/json; charset=UTF-8" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "CREATE (t:Thing { props }) RETURN t",
-    "params": {
-      "props": {
-        "name": "897430271489321",
-        "age": 45
-      }
-    }
-  }' \
-  http://localhost:7474/db/data/cypher
-
-curl -X POST \
-  -H "Accept: application/json; charset=UTF-8" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prop1": "val1"
-  }' \
-  http://localhost:7474/db/data/node
-
-curl -X POST \
-  -H "Accept: application/json; charset=UTF-8" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "statements": [{ 
-        "statement": "CREATE (t:Thing { props }) RETURN id(t), t.name",
-        "resultDataContents" : [ "REST" ],
-        "parameters": {
-          "props": {
-            "name": "46372819647389216478321",
-            "age": "45"
-          }
-        }
-      },
-      { 
-        "statement": "CREATE (t:Things2 { props }) RETURN t.age",
-        "resultDataContents" : [ "REST" ],
-        "parameters": {
-          "props": {
-            "name": "46372819647389216478321",
-            "age": "45"
-          }
-        }
-      }]
-  }' \
-  http://localhost:7474/db/data/transaction
-  
-curl -X POST \
-  -H "Accept: application/json; charset=UTF-8" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "statements": [{ 
-        "statement": "CREATE (t:Thing { props }) RETURN t",
-        "resultDataContents" : [ "REST" ],
-        "parameters": {
-          "props": {
-            "name": "917293432",
-            "age": "34"
-          }
-        }
-      }]
-  }' \
-  http://localhost:7474/db/data/transaction/commit
-
-
- ````
-
-
+## Low Priority
