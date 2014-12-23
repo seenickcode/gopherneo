@@ -10,8 +10,6 @@ import (
 
 func (c *Connection) FindNode(label string, key string, val interface{}, result interface{}) (found bool, err error) {
 
-	logger.Debugf("fetching %v node where '%v'='%v'", label, key, val)
-
 	if len(label) == 0 {
 		err = fmt.Errorf("a label is required to find nodes")
 		return
@@ -34,7 +32,7 @@ func (c *Connection) FindNode(label string, key string, val interface{}, result 
 }
 
 func (c *Connection) FindNodesPaginated(label string, key string, val interface{}, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
-	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
+	logger.Debugf("fetching %v nodes: '%v'='%v'", label, key, val)
 
 	if len(label) == 0 {
 		err = fmt.Errorf("a label is required to find nodes")
@@ -85,6 +83,8 @@ func (c *Connection) CreateNode(label string, props *map[string]interface{}, nod
 	params := &map[string]interface{}{
 		"p": props,
 	}
+
+	logger.Infof("creating %v node with: %v", label, *props)
 
 	cr, err := c.ExecuteCypher(cypher, params)
 	if err != nil {
