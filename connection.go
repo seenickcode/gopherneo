@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/tideland/goas/v3/logger"
 )
 
 type Connection struct {
@@ -54,18 +52,9 @@ type CypherResult struct {
 	Rows        []json.RawMessage
 }
 
-// type TransactionResultData struct {
-// 	RowData   []*json.RawMessage `json:"row"`
-// 	RestData  []*json.RawMessage `json:"rest"`
-// 	GraphData []*json.RawMessage `json:"graph"`
-// }
-
 // get the Neo4j "service root"
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
 func NewConnection(uri string) (c *Connection, err error) {
-
-	// TODO remove error logging
-	logger.SetLevel(logger.LevelError)
 
 	c = &Connection{httpClient: &http.Client{}, Uri: uri}
 
@@ -118,10 +107,6 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 	}
 	req.Header.Add("Accept", "application/json; charset=UTF-8")
 	req.Header.Add("Content-Type", "application/json")
-
-	for k, v := range *params {
-		logger.Debugf("%v: %v", k, v)
-	}
 
 	// make request
 	data, err := c.performRequest(req)

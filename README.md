@@ -1,6 +1,11 @@
 # gopherneo
 Go4Neo is a Neo4j driver for the Go programming language. It's focus is on simple, practical and realistic features that 90% of users working with Neo4j would expect.
 
+## Not Yet for Production Use!
+
+# Version Info
+- v0.1, 12/23/14:  Alpha version. (Though it will soon be used for a real app and upgraded to "Beta" sometime in Jan)
+
 Compatible with Neo4j 2.x and up.
 
 # Examples

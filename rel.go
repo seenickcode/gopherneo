@@ -3,13 +3,9 @@ package gopherneo
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/tideland/goas/v2/logger"
 )
 
 func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 string, key2 string, val2 string, relName string, relProps *map[string]interface{}, resultRel interface{}) (err error) {
-
-	logger.Debugf("linking %v node where '%v'='%v' to %v node where '%v'='%v'", label1, key1, val1, label2, key2, val2)
 
 	if len(label1) == 0 || len(label2) == 0 {
 		err = fmt.Errorf("labels are required to link nodes")
@@ -48,8 +44,6 @@ func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 s
 // UnlinkAllNodes removes all relationships of a specific type from a specified node
 func (c *Connection) UnlinkAllNodes(label1 string, key1 string, val1 string, relName string, label2 string) (err error) {
 
-	logger.Debugf("deleting all %v rels to %v nodes from %v node where '%v'='%v' ", relName, label2, label1, key1, val1)
-
 	if len(label1) == 0 || len(label2) == 0 {
 		err = fmt.Errorf("labels are required to unlink nodes")
 		return
@@ -75,7 +69,6 @@ func (c *Connection) UnlinkAllNodes(label1 string, key1 string, val1 string, rel
 }
 
 func (c *Connection) FindAllRelNodesPaginated(label string, key string, val interface{}, relLabel string, relName string, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
-	logger.Debugf("fetching %v nodes where '%v'='%v'", label, key, val)
 
 	// TODO cleaner, more flexible way to specify order
 
