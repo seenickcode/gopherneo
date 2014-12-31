@@ -51,7 +51,7 @@ func TestLinkUnlinkNodes(t *testing.T) {
 	}
 
 	// ensure they're linked
-	linked, err := db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", "", 0, 0)
+	linked, err := db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", true, "", 0, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,7 +66,7 @@ func TestLinkUnlinkNodes(t *testing.T) {
 	}
 
 	// ensure they're linked
-	linked, err = db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", "", 0, 0)
+	linked, err = db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", true, "", 0, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,7 +81,7 @@ func TestLinkUnlinkNodes(t *testing.T) {
 	}
 
 	// ensure nothing else is linked now
-	linked, err = db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", "", 0, 0)
+	linked, err = db.FindAllRelNodesPaginated("Thing", "name", name1, "ThingOther", "LINKS_TO", true, "", 0, 0)
 	if err != nil {
 		t.Error(err)
 	}

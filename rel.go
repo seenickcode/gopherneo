@@ -68,7 +68,7 @@ func (c *Connection) UnlinkAllNodes(label1 string, key1 string, val1 string, rel
 	return
 }
 
-func (c *Connection) FindAllRelNodesPaginated(label string, key string, val interface{}, relLabel string, relName string, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
+func (c *Connection) FindAllRelNodesPaginated(label string, key string, val interface{}, relLabel string, relName string, relOutgoing bool, orderClause string, pg int, pgSize int) (cr CypherResult, err error) {
 
 	// TODO cleaner, more flexible way to specify order
 
@@ -92,8 +92,14 @@ func (c *Connection) FindAllRelNodesPaginated(label string, key string, val inte
 
 	orderPart := orderClause
 
+	var matchString string
+	if relOutgoing {
+		matchString = "MATCH (n1:%v)-[:%v]->(n2:%v)"
+	} else {
+		matchString = "MATCH (n1:%v)<-[:%v]-(n2:%v)"
+	}
 	parts := []string{
-		fmt.Sprintf("MATCH (n1:%v)-[:%v]->(n2:%v)", label, relName, relLabel),
+		fmt.Sprintf(matchString, label, relName, relLabel),
 		whereCypher,
 		"RETURN n2",
 		orderPart,
