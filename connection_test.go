@@ -56,7 +56,7 @@ func TestQueryWithProps(t *testing.T) {
 	}
 
 	newThing := &Thing{}
-	err = json.Unmarshal(cr.Rows[0], &newThing)
+	err = json.Unmarshal(*cr.Rows[0][0], &newThing)
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,6 +66,55 @@ func TestQueryWithProps(t *testing.T) {
 	if newThing.Age != ageVal {
 		t.Errorf("age incorrect, should be '%v', is '%v'", ageVal, newThing.Age)
 	}
+
+	db.DeleteNodes("Thing", "", "")
+}
+
+func TestReturnMultiNodes(t *testing.T) {
+
+	db, err := NewConnection("http://localhost:7474/db/data")
+	if err != nil {
+		t.Error(err)
+	}
+
+	name1 := "name1"
+	name2 := "name2"
+	cypher := fmt.Sprintf(`
+		CREATE (t1:Thing { name: '%v' })
+		CREATE (t2:Thing { name: '%v' })
+		RETURN t1, t2`, name1, name2)
+	params := &map[string]interface{}{}
+	cr, err := db.ExecuteCypher(cypher, params)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cr.Rows) != 1 {
+		t.Errorf("expected one row returned, query was: %v", cypher)
+	}
+	if len(cr.Rows[0]) != 2 {
+		t.Errorf("expected two nodes returned in first row, query was: %v", cypher)
+	}
+
+	t1 := &Thing{}
+	err = json.Unmarshal(*cr.Rows[0][0], &t1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	t2 := &Thing{}
+	err = json.Unmarshal(*cr.Rows[0][1], &t2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if t1.Name != name1 {
+		t.Errorf("name incorrect, should be '%v', is '%v'", name1, t1.Name)
+	}
+	if t2.Name != name2 {
+		t.Errorf("name incorrect, should be '%v', is '%v'", name2, t2.Name)
+	}
+
+	db.DeleteNodes("Thing", "", "")
 }
 
 // helpers

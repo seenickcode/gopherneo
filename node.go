@@ -21,8 +21,8 @@ func (c *Connection) FindNode(label string, key string, val interface{}, result 
 		err = fmt.Errorf("found more than one %v node where '%v'='%v'", label, key, val)
 		return
 	}
-	if len(cr.Rows) == 1 {
-		err = json.Unmarshal(cr.Rows[0], &result)
+	if len(cr.Rows) == 1 && len(cr.Rows[0]) > 0 {
+		err = json.Unmarshal(*cr.Rows[0][0], &result)
 		found = true
 	}
 
@@ -83,8 +83,8 @@ func (c *Connection) CreateNode(label string, props *map[string]interface{}, nod
 	if err != nil {
 		return
 	}
-	if node != nil && len(cr.Rows) == 1 {
-		err = json.Unmarshal(cr.Rows[0], &node)
+	if node != nil && len(cr.Rows) == 1 && len(cr.Rows[0]) > 0 {
+		err = json.Unmarshal(*cr.Rows[0][0], &node)
 	}
 
 	return
@@ -126,8 +126,8 @@ func (c *Connection) UpdateNode(label string, key string, val interface{}, props
 	if err != nil {
 		return
 	}
-	if node != nil && len(cr.Rows) == 1 {
-		err = json.Unmarshal(cr.Rows[0], &node)
+	if node != nil && len(cr.Rows) == 1 && len(cr.Rows[0]) > 0 {
+		err = json.Unmarshal(*cr.Rows[0][0], &node)
 	}
 
 	return

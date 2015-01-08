@@ -17,11 +17,11 @@ type ThingLinksToThingRel struct {
 	Timestamp float64 `json:"timestamp",float64`
 }
 
-func UnmarshalThings(rows []json.RawMessage) []Thing {
+func UnmarshalThings(rows [][]*json.RawMessage) []Thing {
 	things := make([]Thing, 2)
 	for i, row := range rows {
 		thing := &Thing{}
-		err := json.Unmarshal(row, thing)
+		err := json.Unmarshal(*row[0], thing)
 		if err == nil {
 			things[i] = *thing
 		}

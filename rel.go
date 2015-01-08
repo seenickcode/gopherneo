@@ -34,8 +34,8 @@ func (c *Connection) LinkNodes(label1 string, key1 string, val1 string, label2 s
 	if err != nil {
 		return
 	}
-	if resultRel != nil && len(cr.Rows) > 0 {
-		err = json.Unmarshal(cr.Rows[0], &resultRel)
+	if resultRel != nil && len(cr.Rows) > 0 && len(cr.Rows[0]) > 0 {
+		err = json.Unmarshal(*cr.Rows[0][0], &resultRel)
 	}
 
 	return
@@ -73,11 +73,11 @@ func (c *Connection) FindAllRelNodesPaginated(label string, key string, val inte
 	// TODO cleaner, more flexible way to specify order
 
 	if len(label) == 0 {
-		err = fmt.Errorf("a label is required to find nodes")
+		err = fmt.Errorf("a label is required")
 		return
 	}
 	if len(relName) == 0 {
-		err = fmt.Errorf("relName is required to unlink nodes")
+		err = fmt.Errorf("relName is required")
 		return
 	}
 

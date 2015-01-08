@@ -49,7 +49,7 @@ type TransactionResult struct {
 
 type CypherResult struct {
 	ColumnNames []string
-	Rows        []json.RawMessage
+	Rows        [][]*json.RawMessage
 }
 
 // get the Neo4j "service root"
@@ -131,12 +131,10 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 
 	// copy cols and rows into a CypherResult
 	cr.ColumnNames = tr.Columns
-	cr.Rows = make([]json.RawMessage, len(tr.Data))
+	cr.Rows = make([][]*json.RawMessage, len(tr.Data))
 	for i, rType := range tr.Data {
 		if val, ok := rType["row"]; ok {
-			if len(val) > 0 {
-				cr.Rows[i] = *val[0]
-			}
+			cr.Rows[i] = val
 		}
 	}
 	return
