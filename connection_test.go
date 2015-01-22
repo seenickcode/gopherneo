@@ -7,7 +7,7 @@ import (
 )
 
 func TestConnect(t *testing.T) {
-	c, err := NewConnection("http://localhost:7474/db/data")
+	c, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 	if err != nil {
 		t.Error(err)
 	}
@@ -20,7 +20,7 @@ func TestConnect(t *testing.T) {
 
 func TestQueryWithProps(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 	if err != nil {
 		t.Error(err)
 	}
@@ -72,7 +72,7 @@ func TestQueryWithProps(t *testing.T) {
 
 func TestReturnMultiNodes(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 	if err != nil {
 		t.Error(err)
 	}

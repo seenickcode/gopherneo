@@ -2,6 +2,7 @@ package gopherneo
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,13 +10,14 @@ import (
 )
 
 type Connection struct {
-	httpClient     *http.Client
-	Uri            string
-	Version        string `json:"neo4j_version"`
-	NodeURI        string `json:"node"`
-	NodeLabelsURI  string `json:"node_labels"`
-	CypherURI      string `json:"cypher"`
-	TransactionURI string `json:"transaction"`
+	httpClient       *http.Client
+	Uri              string
+	AuthTokenEncoded string
+	Version          string `json:"neo4j_version"`
+	NodeURI          string `json:"node"`
+	NodeLabelsURI    string `json:"node_labels"`
+	CypherURI        string `json:"cypher"`
+	TransactionURI   string `json:"transaction"`
 	//  Extensions     interface{} `json:"extensions"`
 	// RefNodeURI     string      `json:"reference_node"`
 	// NodeIndexURI   string      `json:"node_index"`
@@ -23,6 +25,16 @@ type Connection struct {
 	// ExtInfoURI     string      `json:"extensions_info"`
 	// RelTypesURI    string      `json:"relationship_types"`
 	// BatchURI       string      `json:"batch"`
+}
+
+type ErrorResponse struct {
+	Errors         []ErrorMessage `json:"errors"`
+	Authentication string         `json:"authentication"`
+}
+
+type ErrorMessage struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type TransactionStatement struct {
@@ -54,20 +66,36 @@ type CypherResult struct {
 
 // get the Neo4j "service root"
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
-func NewConnection(uri string) (c *Connection, err error) {
+func NewConnection(hostname string, port string, token string) (c *Connection, err error) {
 
-	c = &Connection{httpClient: &http.Client{}, Uri: uri}
+	rootUri := fmt.Sprintf("http://%s:%s/db/data/", hostname, port) // WARNING: stupid, but trailing '/' is req
+
+	c = &Connection{httpClient: &http.Client{}, Uri: rootUri}
+	if len(token) > 0 {
+		s := fmt.Sprintf(":%s", token)
+		c.AuthTokenEncoded = base64.StdEncoding.EncodeToString([]byte(s))
+	}
 
 	// prepare request
-	req, err := http.NewRequest("GET", uri, nil)
+	req, err := http.NewRequest("GET", rootUri, nil)
 	if err != nil {
 		return
 	}
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
+	c.addDefaultHeaders(req)
 
 	// perform request
 	data, err := c.performRequest(req) // gets []byte
+
+	// check for errors
+	e := &ErrorResponse{}
+	err = json.Unmarshal(data, &e)
+	if err != nil {
+		return
+	}
+	if len(e.Errors) > 0 {
+		err = fmt.Errorf("%s: '%s'", e.Errors[0].Code, e.Errors[0].Message)
+		return
+	}
 
 	// unmarshal to Connection obj
 	err = json.Unmarshal(data, &c)
@@ -105,8 +133,7 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 	if err != nil {
 		return
 	}
-	req.Header.Add("Accept", "application/json; charset=UTF-8")
-	req.Header.Add("Content-Type", "application/json")
+	c.addDefaultHeaders(req)
 
 	// make request
 	data, err := c.performRequest(req)
@@ -153,4 +180,13 @@ func (c *Connection) performRequest(req *http.Request) (data []byte, err error) 
 		return
 	}
 	return
+}
+
+func (c *Connection) addDefaultHeaders(req *http.Request) {
+	// add headers used in all Neo4j requests
+	req.Header.Add("Accept", "application/json; charset=UTF-8")
+	req.Header.Add("Content-Type", "application/json")
+	if len(c.AuthTokenEncoded) > 0 {
+		req.Header.Add("Authorization", fmt.Sprintf("Basic realm=\"Neo4j\" %s", c.AuthTokenEncoded))
+	}
 }

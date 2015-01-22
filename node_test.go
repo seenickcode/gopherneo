@@ -31,7 +31,7 @@ func UnmarshalThings(rows [][]*json.RawMessage) []Thing {
 
 func TestFindNode(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 
 	// create a node
 	name1 := "joebob7"
@@ -72,7 +72,7 @@ func TestFindNode(t *testing.T) {
 
 func TestFindNodessPaginated(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 
 	// cleanup possibly preexisting nodes
 	_ = db.DeleteNodes("Thing", "", "")
@@ -123,7 +123,7 @@ func TestFindNodessPaginated(t *testing.T) {
 
 func TestCreateNode(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 
 	name1 := "joebob2"
 	age1 := 49
@@ -156,7 +156,7 @@ func TestCreateNode(t *testing.T) {
 
 func TestCreateNodeErrors(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 
 	type Thing struct {
 		Name      string  `json:"name"`
@@ -187,7 +187,7 @@ func TestCreateNodeErrors(t *testing.T) {
 
 func TestUpdateNode(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 
 	name1 := "joebob5"
 	age1 := 46
@@ -233,7 +233,7 @@ func TestUpdateNode(t *testing.T) {
 
 func TestDeleteNodes(t *testing.T) {
 
-	db, err := NewConnection("http://localhost:7474/db/data")
+	db, err := NewConnection("localhost", "7474", "cee35b356a500f6bfd640146b4f3a771")
 
 	// create node
 	name1 := "joebob3"
