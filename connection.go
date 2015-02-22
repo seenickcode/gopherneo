@@ -7,12 +7,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 )
 
 type Connection struct {
 	httpClient       *http.Client
+	DebugMode        bool
 	Uri              string
 	AuthTokenEncoded string
+	RestUsername     string
+	RestPassword     string
 	Version          string `json:"neo4j_version"`
 	NodeURI          string `json:"node"`
 	NodeLabelsURI    string `json:"node_labels"`
@@ -64,24 +68,16 @@ type CypherResult struct {
 	Rows        [][]*json.RawMessage
 }
 
-func NewConnection(baseUri string) (c *Connection, err error) {
-	return NewConnectionWithToken(baseUri, "")
-}
-
 // get the Neo4j "service root"
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
-func NewConnectionWithToken(baseUri string, token string) (c *Connection, err error) {
+func NewConnection(baseUri string) (c *Connection, err error) {
 
-	rootUri := fmt.Sprintf("%v/db/data/", baseUri) // WARNING: stupid, but trailing '/' is req
+	uri := fmt.Sprintf("%v/db/data/", baseUri) // WARNING: stupid, but trailing '/' is req
 
-	c = &Connection{httpClient: &http.Client{}, Uri: rootUri}
-	if len(token) > 0 {
-		s := fmt.Sprintf(":%s", token)
-		c.AuthTokenEncoded = base64.StdEncoding.EncodeToString([]byte(s))
-	}
+	c = &Connection{httpClient: &http.Client{}, Uri: uri}
 
 	// prepare request
-	req, err := http.NewRequest("GET", rootUri, nil)
+	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		return
 	}
@@ -109,6 +105,18 @@ func NewConnectionWithToken(baseUri string, token string) (c *Connection, err er
 	return
 }
 
+func (c *Connection) SetAuthToken(token string) {
+	if len(token) > 0 {
+		s := fmt.Sprintf(":%s", token)
+		c.AuthTokenEncoded = base64.StdEncoding.EncodeToString([]byte(s))
+	}
+}
+
+func (c *Connection) SetRestCredentials(username string, password string) {
+	c.RestUsername = username
+	c.RestPassword = password
+}
+
 // ExecuteCypher will return a slice of "rows", each "row" is a []*json.RawMessage representing
 // a slice of node properties that the user can unmarshal themselves
 func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}) (cr CypherResult, err error) {
@@ -133,6 +141,8 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 	}
 	reqBuf := bytes.NewBuffer(reqData)
 	uri := joinPath([]string{c.TransactionURI, "commit"})
+	uri = addURIRestCredentials(c, uri)
+
 	req, err := http.NewRequest("POST", uri, reqBuf)
 	if err != nil {
 		return
@@ -140,6 +150,9 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 	c.addDefaultHeaders(req)
 
 	// make request
+	if c.DebugMode {
+		fmt.Printf("making cypher req: %v\n", req)
+	}
 	data, err := c.performRequest(req)
 	if err != nil {
 		return
@@ -193,4 +206,13 @@ func (c *Connection) addDefaultHeaders(req *http.Request) {
 	if len(c.AuthTokenEncoded) > 0 {
 		req.Header.Add("Authorization", fmt.Sprintf("Basic realm=\"Neo4j\" %s", c.AuthTokenEncoded))
 	}
+}
+
+func addURIRestCredentials(c *Connection, uri string) string {
+	if len(c.RestUsername) > 0 {
+		// insert URI credentials
+		replWith := fmt.Sprintf("://%s:%s@", c.RestUsername, c.RestPassword)
+		return regexp.MustCompile("://").ReplaceAllString(uri, replWith)
+	}
+	return uri
 }
