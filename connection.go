@@ -64,11 +64,15 @@ type CypherResult struct {
 	Rows        [][]*json.RawMessage
 }
 
+func NewConnection(baseUri string) (c *Connection, err error) {
+	return NewConnectionWithToken(baseUri, "")
+}
+
 // get the Neo4j "service root"
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
-func NewConnection(hostname string, port string, token string) (c *Connection, err error) {
+func NewConnectionWithToken(baseUri string, token string) (c *Connection, err error) {
 
-	rootUri := fmt.Sprintf("http://%s:%s/db/data/", hostname, port) // WARNING: stupid, but trailing '/' is req
+	rootUri := fmt.Sprintf("%v/db/data/", baseUri) // WARNING: stupid, but trailing '/' is req
 
 	c = &Connection{httpClient: &http.Client{}, Uri: rootUri}
 	if len(token) > 0 {
