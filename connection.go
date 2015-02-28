@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 )
@@ -72,36 +73,22 @@ type CypherResult struct {
 // http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
 func NewConnection(baseUri string) (c *Connection, err error) {
 
-	uri := fmt.Sprintf("%v/db/data/", baseUri) // WARNING: stupid, but trailing '/' is req
+	uri := fmt.Sprintf("%v/db/data/", baseUri) // WARNING: stupid, but trailing '/' is req with neo4j
 
 	c = &Connection{httpClient: &http.Client{}, Uri: uri}
+	c.connect(uri)
 
-	// prepare request
-	req, err := http.NewRequest("GET", uri, nil)
-	if err != nil {
-		return
-	}
-	c.addDefaultHeaders(req)
+	return
+}
 
-	// perform request
-	data, err := c.performRequest(req) // gets []byte
+func NewConnectionWithToken(baseUri string, token string) (c *Connection, err error) {
 
-	// check for errors
-	e := &ErrorResponse{}
-	err = json.Unmarshal(data, &e)
-	if err != nil {
-		return
-	}
-	if len(e.Errors) > 0 {
-		err = fmt.Errorf("%s: '%s'", e.Errors[0].Code, e.Errors[0].Message)
-		return
-	}
+	uri := fmt.Sprintf("%v/db/data/", baseUri) // WARNING: stupid, but trailing '/' is req with neo4j
 
-	// unmarshal to Connection obj
-	err = json.Unmarshal(data, &c)
-	if err != nil {
-		return
-	}
+	c = &Connection{httpClient: &http.Client{}, Uri: uri}
+	c.SetAuthToken(token)
+	c.connect(uri)
+
 	return
 }
 
@@ -151,7 +138,7 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 
 	// make request
 	if c.DebugMode {
-		fmt.Printf("making cypher req: %v\n", req)
+		log.Printf("\n\n%v\n\n", req)
 	}
 	data, err := c.performRequest(req)
 	if err != nil {
@@ -180,6 +167,38 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 		if val, ok := rType["row"]; ok {
 			cr.Rows[i] = val
 		}
+	}
+	return
+}
+
+// get the Neo4j "service root"
+// http://docs.neo4j.org/chunked/stable/rest-api-service-root.html
+func (c *Connection) connect(uri string) (err error) {
+
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return
+	}
+	c.addDefaultHeaders(req)
+
+	// perform request
+	data, err := c.performRequest(req)
+
+	// check for errors first
+	e := &ErrorResponse{}
+	err = json.Unmarshal(data, &e)
+	if err != nil {
+		return
+	}
+	if len(e.Errors) > 0 {
+		err = fmt.Errorf("%s: '%s'", e.Errors[0].Code, e.Errors[0].Message)
+		return
+	}
+
+	// no errors, so unmarshal to Connection obj
+	err = json.Unmarshal(data, &c)
+	if err != nil {
+		return
 	}
 	return
 }
