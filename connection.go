@@ -108,6 +108,14 @@ func (c *Connection) SetRestCredentials(username string, password string) {
 // a slice of node properties that the user can unmarshal themselves
 func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}) (cr CypherResult, err error) {
 
+	// reproducible example using curl
+	// curl -H "Accept: application/json" \
+	//  -X POST \
+	//  -H "Content-Type: application/json" \
+	//  -H "Accept: application/json; charset=UTF-8" \
+	//  -d "{{\"statements\":[{\"statement\":\"MATCH (t:Thing) WHERE t.name='This \\* That' RETURN t\",\"parameters\":{},\"resultDataContents\":[\"ROW\"]}]}}" \
+	//  http://localhost:7474/db/data/transaction/commit
+
 	statement := &TransactionStatement{
 		Cypher:      cypher,
 		Params:      *params,
