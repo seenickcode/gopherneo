@@ -76,7 +76,7 @@ func NewConnection(baseUri string) (c *Connection, err error) {
 	uri := fmt.Sprintf("%v/db/data/", baseUri) // WARNING: stupid, but trailing '/' is req with neo4j
 
 	c = &Connection{httpClient: &http.Client{}, Uri: uri}
-	c.connect(uri)
+	err = c.connect(uri)
 
 	return
 }
@@ -87,7 +87,7 @@ func NewConnectionWithToken(baseUri string, token string) (c *Connection, err er
 
 	c = &Connection{httpClient: &http.Client{}, Uri: uri}
 	c.SetAuthToken(token)
-	c.connect(uri)
+	err = c.connect(uri)
 
 	return
 }
@@ -207,6 +207,9 @@ func (c *Connection) connect(uri string) (err error) {
 	err = json.Unmarshal(data, &c)
 	if err != nil {
 		return
+	}
+	if len(c.TransactionURI) == 0 {
+		err = fmt.Errorf("Couldn't get TransactionURI from Neo4j, response was: %v", string(data))
 	}
 	return
 }

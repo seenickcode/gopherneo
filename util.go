@@ -10,6 +10,7 @@ func EscapeStringForCypherRegex(in string) string {
 	r4 := regexp.MustCompile("(\\*)")
 	r5 := regexp.MustCompile("(\")")
 	r6 := regexp.MustCompile("(\\+)")
+	r7 := regexp.MustCompile("(\\$)") // TODO test and add all remaining regex meta characters!
 
 	out := in
 	out = r1.ReplaceAllString(out, "\\\\$1")
@@ -18,6 +19,7 @@ func EscapeStringForCypherRegex(in string) string {
 	out = r4.ReplaceAllString(out, "\\\\$1")
 	out = r5.ReplaceAllString(out, "\\$1")
 	out = r6.ReplaceAllString(out, "\\\\$1")
+	out = r7.ReplaceAllString(out, "\\\\$1")
 
 	//fmt.Printf("out: %v\n", out)
 	return out
