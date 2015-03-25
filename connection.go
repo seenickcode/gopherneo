@@ -170,10 +170,13 @@ func (c *Connection) ExecuteCypher(cypher string, params *map[string]interface{}
 
 	// copy cols and rows into a CypherResult
 	cr.ColumnNames = tr.Columns
-	cr.Rows = make([][]*json.RawMessage, len(tr.Data))
-	for i, rType := range tr.Data {
-		if val, ok := rType["row"]; ok {
-			cr.Rows[i] = val
+	cr.Rows = make([][]*json.RawMessage, 0)
+	// iterate all 'types' of result sets returned (i.e graph, row, etc)
+	for _, rType := range tr.Data {
+		if rawRow, ok := rType["row"]; ok {
+			if rawRow[0] != nil {
+				cr.Rows = append(cr.Rows, rawRow)
+			}
 		}
 	}
 	return
