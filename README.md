@@ -23,6 +23,7 @@ Compatible with Neo4j 2.x and up.
 
 # Planned Features
 ## High Priority
+* return descriptive error if can't connect to server or creds invalid
 * ability to return multiple entire nodes
 * set relationship properties
 
